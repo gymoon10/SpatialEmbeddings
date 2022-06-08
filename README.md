@@ -12,6 +12,20 @@ Our network architecture is a multi-branched version of [ERFNet](https://github.
     <img src="static/teaser.jpg" />
 </p>
 
+<br/>
+## Note
+
+I slightly updated the `criterions` part to be compatible with the latest version of pytorch(1.10.2+cu.113), and added some explanations about the code for understanding.
+
+In addition, instance segmentation with `CVPPP-2017 Dataset` is possible.
+
+For my case with CVPPP, the general architecture is as follow
+
+![image](https://user-images.githubusercontent.com/44194558/172554563-6e589ee5-2bdc-4ad1-9a8f-27c130110c43.png)
+
+
+<br/>
+
 ## License
 
 This software is released under a creative commons license which allows for personal and research use only. For a commercial license please contact the authors. You can view a license summary [here](http://creativecommons.org/licenses/by-nc/4.0/).
