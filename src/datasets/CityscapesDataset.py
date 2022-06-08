@@ -16,7 +16,7 @@ from torch.utils.data import Dataset
 
 
 class CityscapesDataset(Dataset):
-
+    
     class_names = ('person', 'rider', 'car', 'truck',
                    'bus', 'train', 'motorcycle', 'bicycle')
     class_ids = (24, 25, 26, 27, 28, 31, 32, 33)
@@ -50,14 +50,14 @@ class CityscapesDataset(Dataset):
 
         # load image
         image = Image.open(self.image_list[index])
-        sample['image'] = image
+        sample['image'] = image  # (N, 3, h, w)
         sample['im_name'] = self.image_list[index]
 
         # load instances
         instance = Image.open(self.instance_list[index])
         instance, label = self.decode_instance(instance, self.class_id)
-        sample['instance'] = instance
-        sample['label'] = label
+        sample['instance'] = instance  # instance-mask : (N, 1, h, w) 
+        sample['label'] = label  # semantic-mask : (N, 1, h, w) 
 
         # transform
         if(self.transform is not None):
