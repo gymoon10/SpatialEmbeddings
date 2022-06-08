@@ -96,6 +96,7 @@ class Cluster:
 
     def __init__(self, ):
 
+        # x, y coordinate maps
         xm = torch.linspace(0, 2, 2048).view(1, 1, -1).expand(1, 1024, 2048)
         ym = torch.linspace(0, 1, 1024).view(1, -1, 1).expand(1, 1024, 2048)
         xym = torch.cat((xm, ym), 0)
@@ -103,53 +104,71 @@ class Cluster:
         self.xym = xym.cuda()
 
     def cluster_with_gt(self, prediction, instance, n_sigma=1,):
+        '''cluster the pixel embeddings into instance (training)'''
 
         height, width = prediction.size(1), prediction.size(2)
     
         xym_s = self.xym[:, 0:height, 0:width]  # 2 x h x w
-    
+
+        # spatial_emb = offset_vectors (first 2 channels of model output) + coordinate maps
         spatial_emb = torch.tanh(prediction[0:2]) + xym_s  # 2 x h x w
         sigma = prediction[2:2+n_sigma]  # n_sigma x h x w
     
         instance_map = torch.zeros(height, width).byte().cuda()
-    
+        
         unique_instances = instance.unique()
         unique_instances = unique_instances[unique_instances != 0]
-    
+
+        # for each specific instance
         for id in unique_instances:
-    
-            mask = instance.eq(id).view(1, height, width)
-    
+            
+            # mask of specific instance (RoI area)
+            # spatial_emb, sigma below consider only pixels of RoI area
+            mask = instance.eq(id).view(1, height, width)  # (1, h, w)
+
+            # center of instance (mean embedding)
             center = spatial_emb[mask.expand_as(spatial_emb)].view(
                 2, -1).mean(1).view(2, 1, 1)  # 2 x 1 x 1
-    
+
+            # define sigma_k - e.q (7)
             s = sigma[mask.expand_as(sigma)].view(n_sigma, -1).mean(1).view(n_sigma, 1, 1)
             s = torch.exp(s*10)  # n_sigma x 1 x 1
-    
-            dist = torch.exp(-1 * torch.sum(torch.pow(spatial_emb - center, 2)*s, 0))
-    
-            proposal = (dist > 0.5)
-            instance_map[proposal] = id
+            
+            # calculate gaussian score (distance of each pixel embedding from the center)
+            # high value -> pixel embedding is close to the center
+            dist = torch.exp(-1 * torch.sum(torch.pow(spatial_emb - center, 2)*s, 0))  # (h, w)
+            
+            # e.q (11)
+            proposal = (dist > 0.5)  # (h, w)
+            instance_map[proposal] = id  # (h, w)
     
         return instance_map
 
     def cluster(self, prediction, n_sigma=1, threshold=0.5):
+        '''for test'''
 
         height, width = prediction.size(1), prediction.size(2)
         xym_s = self.xym[:, 0:height, 0:width]
         
         spatial_emb = torch.tanh(prediction[0:2]) + xym_s  # 2 x h x w
         sigma = prediction[2:2+n_sigma]  # n_sigma x h x w
+
+        # sigmoid is applied to seed_map
+        # as the regression loss is used for training, b.g pixels become zero
+        # it is similar to semantic mask
         seed_map = torch.sigmoid(prediction[2+n_sigma:2+n_sigma + 1])  # 1 x h x w
        
         instance_map = torch.zeros(height, width).byte()
         instances = []
 
         count = 1
-        mask = seed_map > 0.5
+
+        # RoI pixels - set of pixels belonging to instances
+        mask = seed_map > 0.5  # (1, h, w)
 
         if mask.sum() > 128:
 
+            # only consider the pixels which belong to mask (RoI pixels)
             spatial_emb_masked = spatial_emb[mask.expand_as(spatial_emb)].view(2, -1)
             sigma_masked = sigma[mask.expand_as(sigma)].view(n_sigma, -1)
             seed_map_masked = seed_map[mask].view(1, -1)
@@ -159,23 +178,30 @@ class Cluster:
 
             while(unclustered.sum() > 128):
 
+                # at inference time, we select a pixel embedding with a high seed score
+                # embedding with the highest seed score is close to instance's center
                 seed = (seed_map_masked * unclustered.float()).argmax().item()
                 seed_score = (seed_map_masked * unclustered.float()).max().item()
                 if seed_score < threshold:
                     break
+
+                # define instance center (embedding with the highest seed score)
                 center = spatial_emb_masked[:, seed:seed+1]
                 unclustered[seed] = 0
+                # accompanying sigma (instance specific margin)
                 s = torch.exp(sigma_masked[:, seed:seed+1]*10)
                 dist = torch.exp(-1*torch.sum(torch.pow(spatial_emb_masked -
                                                         center, 2)*s, 0, keepdim=True))
 
+                # e.q (11)
                 proposal = (dist > 0.5).squeeze()
 
+                # mask out all clustered pixels in the seed map, until all seeds are masked
                 if proposal.sum() > 128:
                     if unclustered[proposal].sum().float()/proposal.sum().float() > 0.5:
                         instance_map_masked[proposal.squeeze()] = count
                         instance_mask = torch.zeros(height, width).byte()
-                        instance_mask[mask.squeeze().cpu()] = proposal.cpu()
+                        instance_mask[mask.squeeze().cpu()] = proposal.cpu().byte()
                         instances.append(
                             {'mask': instance_mask.squeeze()*255, 'score': seed_score})
                         count += 1
