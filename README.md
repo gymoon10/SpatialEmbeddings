@@ -13,7 +13,8 @@ Our network architecture is a multi-branched version of [ERFNet](https://github.
 </p>
 
 <br/>
-## Note
+
+##  Note
 
 I slightly updated the `criterions` part to be compatible with the latest version of pytorch(1.10.2+cu.113), and added some explanations about the code for understanding.
 
