@@ -1,17 +1,5 @@
 # Instance segmentation by jointly optimizing spatial embeddings and clustering bandwidth
 
-This codebase implements the loss function described in: 
-
-[Instance Segmentation by Jointly Optimizing Spatial Embeddings and Clustering Bandwidth](https://arxiv.org/pdf/1906.11109.pdf)
-Davy Neven, Bert De Brabandere, Marc Proesmans, and Luc Van Gool
-Conference on Computer Vision and Pattern Recognition (CVPR), june 2019
-
-Our network architecture is a multi-branched version of [ERFNet](https://github.com/Eromera/erfnet_pytorch) and uses the [Lovasz-hinge loss](https://github.com/bermanmaxim/LovaszSoftmax) for maximizing the IoU of each instance.
-
-<p align="center">
-    <img src="static/teaser.jpg" />
-</p>
-
 <br/>
 
 ##  Note
@@ -24,6 +12,17 @@ For my case with CVPPP, the general architecture is as follow
 
 ![image](https://user-images.githubusercontent.com/44194558/172554563-6e589ee5-2bdc-4ad1-9a8f-27c130110c43.png)
 
+This codebase implements the loss function described in: 
+
+[Instance Segmentation by Jointly Optimizing Spatial Embeddings and Clustering Bandwidth](https://arxiv.org/pdf/1906.11109.pdf)
+Davy Neven, Bert De Brabandere, Marc Proesmans, and Luc Van Gool
+Conference on Computer Vision and Pattern Recognition (CVPR), june 2019
+
+Our network architecture is a multi-branched version of [ERFNet](https://github.com/Eromera/erfnet_pytorch) and uses the [Lovasz-hinge loss](https://github.com/bermanmaxim/LovaszSoftmax) for maximizing the IoU of each instance.
+
+<p align="center">
+    <img src="static/teaser.jpg" />
+</p>
 
 <br/>
 
