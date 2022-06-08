@@ -1,5 +1,3 @@
-# Instance segmentation by jointly optimizing spatial embeddings and clustering bandwidth
-
 ##  Note
 
 I slightly updated the `criterions` part to be compatible with the latest version of pytorch(1.10.2+cu.113), and added some explanations about the code for understanding.
@@ -9,6 +7,10 @@ In addition, instance segmentation with `CVPPP-2017 Dataset` is possible.
 For my case with CVPPP, the general architecture is as follow
 
 ![image](https://user-images.githubusercontent.com/44194558/172554563-6e589ee5-2bdc-4ad1-9a8f-27c130110c43.png)
+
+<br/>
+
+# Instance segmentation by jointly optimizing spatial embeddings and clustering bandwidth
 
 This codebase implements the loss function described in: 
 
