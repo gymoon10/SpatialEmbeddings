@@ -10,6 +10,8 @@ import torch.nn.functional as F
 
 
 class DownsamplerBlock (nn.Module):
+    '''Downsampling by concatenating parallel output of
+    3x3 conv(stride=2) & max-pooling'''
     def __init__(self, ninput, noutput):
         super().__init__()
 
@@ -25,9 +27,13 @@ class DownsamplerBlock (nn.Module):
 
 
 class non_bottleneck_1d (nn.Module):
+    '''Factorized residual layer
+    dilation can gather more context (a.k.a. atrous conv)'''
     def __init__(self, chann, dropprob, dilated):
         super().__init__()
-
+        
+        # factorize 3x3 conv to (3x1) x (1x3) x (3x1) x (1x3)
+        # non-linearity can be added to each decomposed 1D filters
         self.conv3x1_1 = nn.Conv2d(
             chann, chann, (3, 1), stride=1, padding=(1, 0), bias=True)
 
@@ -49,13 +55,15 @@ class non_bottleneck_1d (nn.Module):
     def forward(self, input):
 
         output = self.conv3x1_1(input)
-        output = F.relu(output)
+        output = F.relu(output)  # non-linearity
+
         output = self.conv1x3_1(output)
         output = self.bn1(output)
         output = F.relu(output)
 
         output = self.conv3x1_2(output)
         output = F.relu(output)
+
         output = self.conv1x3_2(output)
         output = self.bn2(output)
 
@@ -75,11 +83,11 @@ class Encoder(nn.Module):
         self.layers.append(DownsamplerBlock(16, 64))
 
         for x in range(0, 5):  # 5 times
-            self.layers.append(non_bottleneck_1d(64, 0.03, 1))
+            self.layers.append(non_bottleneck_1d(64, 0.03, 1))  # no dilation
 
         self.layers.append(DownsamplerBlock(64, 128))
 
-        for x in range(0, 2):  # 2 times
+        for x in range(0, 2):  # 2 times (with dilation)
             self.layers.append(non_bottleneck_1d(128, 0.3, 2))
             self.layers.append(non_bottleneck_1d(128, 0.3, 4))
             self.layers.append(non_bottleneck_1d(128, 0.3, 8))
@@ -95,7 +103,7 @@ class Encoder(nn.Module):
         for layer in self.layers:
             output = layer(output)
 
-        if predict:
+        if predict:  # not used in this code
             output = self.output_conv(output)
 
         return output
@@ -104,6 +112,7 @@ class Encoder(nn.Module):
 class UpsamplerBlock (nn.Module):
     def __init__(self, ninput, noutput):
         super().__init__()
+        # do not use max-unpooling operation
         self.conv = nn.ConvTranspose2d(
             ninput, noutput, 3, stride=2, padding=1, output_padding=1, bias=True)
         self.bn = nn.BatchNorm2d(noutput, eps=1e-3)
@@ -115,6 +124,8 @@ class UpsamplerBlock (nn.Module):
 
 
 class Decoder (nn.Module):
+    '''small (not symmetric) decoder that upsamples encoder's output
+    by fine-tuning the details'''
     def __init__(self, num_classes):
         super().__init__()
 
@@ -141,17 +152,18 @@ class Decoder (nn.Module):
 
         return output
 
-# ERFNet
 
 
 class Net(nn.Module):
+    '''ERFNet'''
     def __init__(self, num_classes, encoder=None):  # use encoder to pass pretrained encoder
         super().__init__()
 
         if (encoder == None):
-            self.encoder = Encoder(num_classes)
+            self.encoder = Encoder(num_classes)  # Encoder(3+1) in this code
         else:
             self.encoder = encoder
+
         self.decoder = Decoder(num_classes)
 
     def forward(self, input, only_encode=False):
