@@ -100,11 +100,14 @@ def train(epoch):
 
     for i, sample in enumerate(tqdm(train_dataset_it)):
 
-        im = sample['image']
-        instances = sample['instance'].squeeze()
-        class_labels = sample['label'].squeeze()
-
-        output = model(im)
+        im = sample['image']  # (N, 3, 512, 512)
+        instances = sample['instance'].squeeze()  # instance-mask : (N, h, w)
+        class_labels = sample['label'].squeeze()  # semantic-mask : (N, h, w)
+        
+        # model output consists of instance-branch (3 ch) & seed-branch (1 ch)
+        # first 2 ch are offset vectors, third one is sigma (instance-branch), and the last is seed (seed-branch)
+        # offset vectors are in [-1, 1]
+        output = model(im)  # (N, 4, h, w) 
         loss = criterion(output, instances, class_labels, **args['loss_w'])
         loss = loss.mean()
 
@@ -114,18 +117,18 @@ def train(epoch):
 
         if args['display'] and i % args['display_it'] == 0:
             with torch.no_grad():
-                visualizer.display(im[0], 'image')
+                visualizer.display(im[0], 'image')  # input image
                 
                 predictions = cluster.cluster_with_gt(output[0], instances[0], n_sigma=args['loss_opts']['n_sigma'])
-                visualizer.display([predictions.cpu(), instances[0].cpu()], 'pred')
+                visualizer.display([predictions.cpu(), instances[0].cpu()], 'pred')  # it shows prediction / GT-mask
 
                 sigma = output[0][2].cpu()
                 sigma = (sigma - sigma.min())/(sigma.max() - sigma.min())
                 sigma[instances[0] == 0] = 0
-                visualizer.display(sigma, 'sigma')
+                visualizer.display(sigma, 'sigma')  # sigma
 
                 seed = torch.sigmoid(output[0][3]).cpu()
-                visualizer.display(seed, 'seed')
+                visualizer.display(seed, 'seed')  # seed map
 
         loss_meter.update(loss.item())
 
@@ -143,11 +146,13 @@ def val(epoch):
 
         for i, sample in enumerate(tqdm(val_dataset_it)):
 
-            im = sample['image']
-            instances = sample['instance'].squeeze()
-            class_labels = sample['label'].squeeze()
-
-            output = model(im)
+            im = sample['image']  # (N, 3, 512, 512)
+            instances = sample['instance'].squeeze()  # instance-mask : (N, h, w) 
+            class_labels = sample['label'].squeeze()  # semantic-mask : (N, h, w) 
+            
+            # output consists of instance-branch (3 ch) & seed-branch (1 ch)
+            # first 2 ch are offset vectors, third one is sigma (instance-branch), and the last is seed (seed-branch)
+            output = model(im)  # (N, 4, h, w) 
             loss = criterion(output, instances, class_labels, **
                             args['loss_w'], iou=True, iou_meter=iou_meter)
             loss = loss.mean()

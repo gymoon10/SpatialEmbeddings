@@ -36,19 +36,14 @@ device = torch.device("cuda:0" if args['cuda'] else "cpu")
 dataset = get_dataset(
     args['dataset']['name'], args['dataset']['kwargs'])
 dataset_it = torch.utils.data.DataLoader(
-    dataset, batch_size=1, shuffle=False, drop_last=False, num_workers=4, pin_memory=True if args['cuda'] else False)
+    dataset, batch_size=1, shuffle=False, drop_last=False, num_workers=0, pin_memory=True if args['cuda'] else False)
 
 # load model
 model = get_model(args['model']['name'], args['model']['kwargs'])
 model = torch.nn.DataParallel(model).to(device)
 
-# load snapshot
-if os.path.exists(args['checkpoint_path']):
-    state = torch.load(args['checkpoint_path'])
-    model.load_state_dict(state['model_state_dict'], strict=True)
-else:
-    assert(False, 'checkpoint_path {} does not exist!'.format(args['checkpoint_path']))
-
+state = torch.load(args['checkpoint_path'])
+model.load_state_dict(state['model_state_dict'], strict=True)
 model.eval()
 
 # cluster module

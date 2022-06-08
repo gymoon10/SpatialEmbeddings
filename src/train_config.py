@@ -10,7 +10,7 @@ from PIL import Image
 import torch
 from utils import transforms as my_transforms
 
-CITYSCAPES_DIR=os.environ.get('CITYSCAPES_DIR')
+CITYSCAPES_DIR='E:/cityscapes'
 
 args = dict(
 
@@ -46,7 +46,7 @@ args = dict(
             ]),
         },
         'batch_size': 16,
-        'workers': 8
+        'workers': 0
     }, 
 
     val_dataset = {
@@ -65,7 +65,7 @@ args = dict(
             ]),
         },
         'batch_size': 16,
-        'workers': 8
+        'workers': 0
     }, 
 
     model = {

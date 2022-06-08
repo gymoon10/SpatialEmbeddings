@@ -10,15 +10,15 @@ from PIL import Image
 import torch
 from utils import transforms as my_transforms
 
-CITYSCAPES_DIR=os.environ.get('CITYSCAPES_DIR')
+CITYSCAPES_DIR='E:/cityscapes'
 
 args = dict(
 
     cuda=True,
     display=True,
 
-    save=False,
-    save_dir='./masks/',
+    save=True,
+    save_dir='C:/Users/Moon/Desktop/SpatialEmbeddings-master/src/masks/',
     checkpoint_path='./pretrained_models/cars_pretrained_model.pth',
 
     dataset= { 
